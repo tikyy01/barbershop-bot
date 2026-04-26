@@ -2,8 +2,6 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from datetime import datetime, timedelta
 
-# ─── Услуги ──────────────────────────────────────────────────────────────────
-
 SERVICES = [
     ("✂️ Стрижка", "900 ₽"),
     ("👦 Детская стрижка", "900 ₽"),
@@ -17,8 +15,6 @@ SERVICES = [
 
 SERVICE_LABELS = {str(i): f"{name} — {price}" for i, (name, price) in enumerate(SERVICES)}
 
-# ─── Главное меню клиента ─────────────────────────────────────────────────────
-
 def client_main_menu():
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -27,8 +23,6 @@ def client_main_menu():
         ],
         resize_keyboard=True
     )
-
-# ─── Главное меню админа ──────────────────────────────────────────────────────
 
 def admin_main_menu():
     return ReplyKeyboardMarkup(
@@ -42,16 +36,12 @@ def admin_main_menu():
         resize_keyboard=True
     )
 
-# ─── Выбор услуги (клиент) ───────────────────────────────────────────────────
-
 def services_keyboard():
     builder = InlineKeyboardBuilder()
     for i, (name, price) in enumerate(SERVICES):
         builder.button(text=f"{name} — {price}", callback_data=f"s:{i}")
     builder.adjust(1)
     return builder.as_markup()
-
-# ─── Выбор даты (клиент) — только даты со свободными слотами ─────────────────
 
 def available_dates_keyboard(dates: list):
     builder = InlineKeyboardBuilder()
@@ -62,20 +52,13 @@ def available_dates_keyboard(dates: list):
     for d in dates:
         day = datetime.strptime(d, "%Y-%m-%d").date()
         if day < today:
-            continue  # пропускаем прошедшие даты
+            continue
         diff = (day - today).days
-        if diff == 0:
-            prefix = "Сегодня"
-        elif diff == 1:
-            prefix = "Завтра"
-        else:
-            prefix = days_ru[day.weekday()]
+        prefix = "Сегодня" if diff == 0 else "Завтра" if diff == 1 else days_ru[day.weekday()]
         label = f"{prefix}, {day.day} {months_ru[day.month - 1]}"
         builder.button(text=label, callback_data=f"date:{d}")
     builder.adjust(2)
     return builder.as_markup()
-
-# ─── Выбор времени (клиент) ───────────────────────────────────────────────────
 
 def free_times_keyboard(free_slots: list):
     builder = InlineKeyboardBuilder()
@@ -84,16 +67,11 @@ def free_times_keyboard(free_slots: list):
     builder.adjust(3)
     return builder.as_markup()
 
-# ─── Запрос контакта ─────────────────────────────────────────────────────────
-
 def contact_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="📱 Отправить номер", request_contact=True)]],
-        resize_keyboard=True,
-        one_time_keyboard=True
+        resize_keyboard=True, one_time_keyboard=True
     )
-
-# ─── Подтверждение записи ─────────────────────────────────────────────────────
 
 def confirm_keyboard():
     builder = InlineKeyboardBuilder()
@@ -101,8 +79,6 @@ def confirm_keyboard():
     builder.button(text="❌ Отмена", callback_data="cancel_booking")
     builder.adjust(2)
     return builder.as_markup()
-
-# ─── Управление записью (админ) ───────────────────────────────────────────────
 
 def appointment_manage_keyboard(appt_id):
     builder = InlineKeyboardBuilder()
@@ -112,14 +88,10 @@ def appointment_manage_keyboard(appt_id):
     builder.adjust(2)
     return builder.as_markup()
 
-# ─── Отмена записи клиентом ───────────────────────────────────────────────────
-
 def cancel_appointment_keyboard(appt_id):
     builder = InlineKeyboardBuilder()
     builder.button(text="❌ Отменить запись", callback_data=f"client_cancel:{appt_id}")
     return builder.as_markup()
-
-# ─── Меню расписания (админ) ──────────────────────────────────────────────────
 
 def schedule_menu_keyboard():
     return ReplyKeyboardMarkup(
@@ -133,9 +105,8 @@ def schedule_menu_keyboard():
         resize_keyboard=True
     )
 
-# ─── Выбор даты (админ) — ближайшие 14 дней ──────────────────────────────────
-
-def admin_date_picker_keyboard():
+def admin_date_picker_keyboard(prefix="adm_date"):
+    """Выбор даты на 14 дней вперёд — используется и для добавления и для просмотра."""
     builder = InlineKeyboardBuilder()
     days_ru = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
     months_ru = ["янв", "фев", "мар", "апр", "май", "июн",
@@ -143,19 +114,12 @@ def admin_date_picker_keyboard():
     today = datetime.now().date()
     for i in range(14):
         day = today + timedelta(days=i)
-        if i == 0:
-            prefix = "Сегодня"
-        elif i == 1:
-            prefix = "Завтра"
-        else:
-            prefix = days_ru[day.weekday()]
-        label = f"{prefix}, {day.day} {months_ru[day.month - 1]}"
-        builder.button(text=label, callback_data=f"adm_date:{day.strftime('%Y-%m-%d')}")
-    builder.button(text="✏️ Ввести дату вручную", callback_data="adm_date:manual")
+        prefix_label = "Сегодня" if i == 0 else "Завтра" if i == 1 else days_ru[day.weekday()]
+        label = f"{prefix_label}, {day.day} {months_ru[day.month - 1]}"
+        builder.button(text=label, callback_data=f"{prefix}:{day.strftime('%Y-%m-%d')}")
+    builder.button(text="✏️ Ввести дату вручную", callback_data=f"{prefix}:manual")
     builder.adjust(2)
     return builder.as_markup()
-
-# ─── Выбор времени (админ) — с 10:00 до 20:00 каждые 15 минут + галочки ──────
 
 def admin_time_picker_keyboard(selected: list):
     builder = InlineKeyboardBuilder()
@@ -164,13 +128,35 @@ def admin_time_picker_keyboard(selected: list):
     current = start
     while current <= end:
         t = current.strftime("%H:%M")
-        if t in selected:
-            label = f"✅ {t}"
-        else:
-            label = t
+        label = f"✅ {t}" if t in selected else t
         builder.button(text=label, callback_data=f"adm_time:{t}")
         current += timedelta(minutes=15)
     builder.button(text="✏️ Добавить своё время", callback_data="adm_time:manual")
     builder.button(text="💾 Сохранить", callback_data="adm_time:save")
     builder.adjust(4)
+    return builder.as_markup()
+
+def schedule_view_slots_keyboard(all_slots: list, booked: list):
+    """Расписание кнопками: ❌ занято, ✅ свободно."""
+    builder = InlineKeyboardBuilder()
+    for slot in all_slots:
+        if slot in booked:
+            builder.button(text=f"❌ {slot}", callback_data=f"view_slot:{slot}:busy")
+        else:
+            builder.button(text=f"✅ {slot}", callback_data=f"view_slot:{slot}:free")
+    builder.adjust(3)
+    return builder.as_markup()
+
+def slot_action_keyboard(date: str, slot: str, appt_id: int = None):
+    """Меню действий при нажатии на слот."""
+    builder = InlineKeyboardBuilder()
+    if appt_id:
+        builder.button(text="🗑 Удалить запись", callback_data=f"admin_delete:{appt_id}")
+        builder.button(text="✅ Подтвердить", callback_data=f"admin_confirm:{appt_id}")
+        builder.button(text="❌ Отменить запись", callback_data=f"admin_cancel:{appt_id}")
+    else:
+        builder.button(text="🔒 Закрыть слот", callback_data=f"close_slot:{date}:{slot}")
+        builder.button(text="🗑 Удалить слот", callback_data=f"del_slot:{date}:{slot}")
+    builder.button(text="🔙 Назад", callback_data=f"view_back:{date}")
+    builder.adjust(2)
     return builder.as_markup()
