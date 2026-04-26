@@ -140,23 +140,26 @@ def schedule_view_slots_keyboard(all_slots: list, booked: list):
     """Расписание кнопками: ❌ занято, ✅ свободно."""
     builder = InlineKeyboardBuilder()
     for slot in all_slots:
+        # Время 10:00 -> 10-00 в callback чтобы не ломать split(":")
+        slot_cb = slot.replace(":", "-")
         if slot in booked:
-            builder.button(text=f"❌ {slot}", callback_data=f"view_slot:{slot}:busy")
+            builder.button(text=f"❌ {slot}", callback_data=f"vs:{slot_cb}:b")
         else:
-            builder.button(text=f"✅ {slot}", callback_data=f"view_slot:{slot}:free")
+            builder.button(text=f"✅ {slot}", callback_data=f"vs:{slot_cb}:f")
     builder.adjust(3)
     return builder.as_markup()
 
 def slot_action_keyboard(date: str, slot: str, appt_id: int = None):
     """Меню действий при нажатии на слот."""
     builder = InlineKeyboardBuilder()
+    slot_cb = slot.replace(":", "-")
     if appt_id:
         builder.button(text="🗑 Удалить запись", callback_data=f"admin_delete:{appt_id}")
         builder.button(text="✅ Подтвердить", callback_data=f"admin_confirm:{appt_id}")
         builder.button(text="❌ Отменить запись", callback_data=f"admin_cancel:{appt_id}")
     else:
-        builder.button(text="🔒 Закрыть слот", callback_data=f"close_slot:{date}:{slot}")
-        builder.button(text="🗑 Удалить слот", callback_data=f"del_slot:{date}:{slot}")
-    builder.button(text="🔙 Назад", callback_data=f"view_back:{date}")
+        builder.button(text="🔒 Закрыть слот", callback_data=f"cs:{date}:{slot_cb}")
+        builder.button(text="🗑 Удалить слот", callback_data=f"ds:{date}:{slot_cb}")
+    builder.button(text="🔙 Назад", callback_data=f"vb:{date}")
     builder.adjust(2)
     return builder.as_markup()
