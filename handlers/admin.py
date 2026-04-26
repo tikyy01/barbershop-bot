@@ -168,22 +168,22 @@ async def show_schedule(msg, date_str: str, edit: bool):
 
 # ─── Нажатие на слот в расписании ────────────────────────────────────────────
 
-@router.callback_query(F.data.startswith("view_slot:"), F.from_user.id == ADMIN_ID)
+@router.callback_query(F.data.startswith("vs:"), F.from_user.id == ADMIN_ID)
 async def view_slot_action(callback: CallbackQuery, state: FSMContext):
+    # vs:10-00:f  или  vs:10-00:b
     parts = callback.data.split(":")
-    slot = parts[1]
-    status = parts[2]
+    slot_cb = parts[1]           # "10-00"
+    status = parts[2]            # "f" или "b"
+    slot = slot_cb.replace("-", ":")  # "10:00"
 
-    # Достаём дату из текста сообщения
     import re
     match = re.search(r"(\d{4}-\d{2}-\d{2})", callback.message.text)
     date_str = match.group(1) if match else ""
 
-    if status == "free":
+    if status == "f":
         text = f"🕐 <b>{slot}</b> — свободно\n\nЧто сделать с этим слотом?"
         kb = slot_action_keyboard(date_str, slot)
     else:
-        # Найти запись на это время
         appointments = await get_appointments_by_date(date_str)
         appt = next((a for a in appointments if a["time"] == slot and a["status"] != "cancelled"), None)
         if appt:
@@ -200,29 +200,28 @@ async def view_slot_action(callback: CallbackQuery, state: FSMContext):
             kb = slot_action_keyboard(date_str, slot)
 
     await callback.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
-
 # ─── Кнопка "Назад" в слоте — возврат к расписанию ──────────────────────────
 
-@router.callback_query(F.data.startswith("view_back:"), F.from_user.id == ADMIN_ID)
+@router.callback_query(F.data.startswith("vb:"), F.from_user.id == ADMIN_ID)
 async def view_back(callback: CallbackQuery):
     date_str = callback.data.split(":", 1)[1]
     await show_schedule(callback.message, date_str, edit=True)
 
 # ─── Закрыть / удалить слот через кнопку ─────────────────────────────────────
 
-@router.callback_query(F.data.startswith("close_slot:"), F.from_user.id == ADMIN_ID)
+@router.callback_query(F.data.startswith("cs:"), F.from_user.id == ADMIN_ID)
 async def close_slot_inline(callback: CallbackQuery):
-    parts = callback.data.split(":")
-    date_str, time_str = parts[1], parts[2]
+    _, date_str, slot_cb = callback.data.split(":")
+    time_str = slot_cb.replace("-", ":")
     await add_appointment(user_id=0, username="admin", full_name="⛔ Закрыто",
                           phone="—", service="Закрыто вручную", date=date_str, time=time_str)
     await callback.answer("Слот закрыт!")
     await show_schedule(callback.message, date_str, edit=True)
 
-@router.callback_query(F.data.startswith("del_slot:"), F.from_user.id == ADMIN_ID)
+@router.callback_query(F.data.startswith("ds:"), F.from_user.id == ADMIN_ID)
 async def delete_slot_inline(callback: CallbackQuery):
-    parts = callback.data.split(":")
-    date_str, time_str = parts[1], parts[2]
+    _, date_str, slot_cb = callback.data.split(":")
+    time_str = slot_cb.replace("-", ":")
     await delete_time_slot(date_str, time_str)
     await callback.answer("Слот удалён!")
     await show_schedule(callback.message, date_str, edit=True)
@@ -446,12 +445,10 @@ async def admin_delete(callback: CallbackQuery):
     appt = await get_appointment_by_id(appt_id)
     await delete_appointment(appt_id)
     await callback.answer("🗑 Удалено!")
-    # Если удаляем из просмотра расписания — возвращаемся к расписанию
-    if appt:
-        import re
-        match = re.search(r"(\d{4}-\d{2}-\d{2})", callback.message.text)
-        if match:
-            await show_schedule(callback.message, match.group(1), edit=True)
-            return
-    await callback.message.edit_text(
-        callback.message.text + "\n\n<i>🗑 Удалено</i>", parse_mode="HTML", reply_markup=None)
+    import re
+    match = re.search(r"(\d{4}-\d{2}-\d{2})", callback.message.text)
+    if match:
+        await show_schedule(callback.message, match.group(1), edit=True)
+    else:
+        await callback.message.edit_text(
+            callback.message.text + "\n\n<i>🗑 Удалено</i>", parse_mode="HTML", reply_markup=None)
